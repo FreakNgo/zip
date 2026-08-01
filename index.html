@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANTIFY — Compress anything, on-device</title>
+<meta name="description" content="ANTIFY compresses files and whole folder trees into a single zip, entirely in your browser. No uploads, no size limits, no bloat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg: #0B0E14;
+  --surface: #131720;
+  --surface-2: #191F2B;
+  --line: #232B39;
+  --ember: #FF5A3C;
+  --ember-dim: #7A2D1F;
+  --mint: #4AE8C4;
+  --text: #E9EDF3;
+  --muted: #7C8698;
+  --radius: 14px;
+  --display: 'Space Grotesk', sans-serif;
+  --body: 'Inter', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+*{ box-sizing: border-box; }
+html{ scroll-behavior: smooth; }
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+.mono{ font-family: var(--mono); }
+a{ color: inherit; }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+
+/* ============ INTRO ============ */
+#intro{
+  position: fixed; inset:0; z-index: 100;
+  background: radial-gradient(ellipse at 50% 40%, #151b26 0%, #0B0E14 70%);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  overflow:hidden;
+}
+#intro-canvas{ position:absolute; inset:0; width:100%; height:100%; }
+.intro-word{
+  position:relative; z-index:2;
+  display:flex; gap: clamp(2px,0.6vw,10px);
+  font-family: var(--display);
+  font-weight:700;
+  font-size: clamp(2.6rem, 11vw, 8rem);
+  letter-spacing: 0.02em;
+}
+.intro-word span{
+  display:inline-block;
+  opacity:0;
+  transform: translateY(28px) scale(0.85);
+  filter: blur(6px);
+  color: var(--text);
+  text-shadow: 0 0 30px rgba(255,90,60,0.35);
+  animation: letterCompress 0.6s cubic-bezier(.2,.9,.25,1) forwards;
+}
+.intro-word span:nth-child(1){ animation-delay: .55s; }
+.intro-word span:nth-child(2){ animation-delay: .62s; }
+.intro-word span:nth-child(3){ animation-delay: .69s; }
+.intro-word span:nth-child(4){ animation-delay: .76s; }
+.intro-word span:nth-child(5){ animation-delay: .83s; }
+.intro-word span:nth-child(6){ animation-delay: .90s; }
+@keyframes letterCompress{
+  0%{ opacity:0; transform: translateY(28px) scale(0.85); filter: blur(6px); }
+  60%{ opacity:1; transform: translateY(-4px) scale(1.04); filter: blur(0); }
+  100%{ opacity:1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.intro-sub{
+  position:relative; z-index:2;
+  margin-top: 18px;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity:0;
+  animation: fadeUp .7s ease forwards;
+  animation-delay: 1.25s;
+}
+@keyframes fadeUp{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+#skip-intro{
+  position:absolute; top:20px; right:20px; z-index:3;
+  background:transparent; border:1px solid var(--line); color:var(--muted);
+  padding:8px 14px; border-radius:999px; font-family:var(--mono); font-size:0.75rem;
+  cursor:pointer;
+}
+#skip-intro:hover{ color:var(--text); border-color:var(--muted); }
+
+#intro.fade-out{
+  animation: introFade .6s ease forwards;
+}
+@keyframes introFade{ to{ opacity:0; visibility:hidden; } }
+
+/* ============ APP SHELL ============ */
+#app[hidden]{ display:none; }
+.topbar{
+  display:flex; justify-content:space-between; align-items:center;
+  padding: 22px clamp(20px,5vw,64px);
+  border-bottom: 1px solid var(--line);
+  position:sticky; top:0; background: rgba(11,14,20,0.85); backdrop-filter: blur(10px);
+  z-index: 10;
+}
+.wordmark{ font-family: var(--display); font-weight:700; letter-spacing:0.04em; font-size:1.1rem; }
+.tag{ font-family: var(--mono); font-size:0.7rem; color: var(--muted); letter-spacing:0.06em; }
+
+main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
+
+/* ============ HERO ============ */
+.hero{ padding: clamp(48px,8vw,88px) 0 40px; text-align:center; }
+.hero h1{
+  font-family: var(--display); font-weight:700;
+  font-size: clamp(2rem, 5.5vw, 3.2rem);
+  line-height:1.08; margin: 0 0 18px;
+}
+.hero h1 .accent{ color: var(--ember); }
+.hero-sub{ color: var(--muted); max-width: 480px; margin: 0 auto 40px; line-height:1.55; }
+
+/* Signature element: the "press" */
+.dropzone{
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 40px 20px 30px;
+  background: var(--surface);
+  transition: border-color .2s ease, background .2s ease;
+  outline: none;
+}
+.dropzone:focus-visible, .dropzone.dragover{
+  border-color: var(--ember);
+  background: var(--surface-2);
+}
+.press{ display:flex; flex-direction:column; align-items:center; margin-bottom: 14px; }
+.press-top{
+  width: 64px; height: 6px; border-radius: 4px;
+  background: linear-gradient(90deg, var(--ember), var(--mint));
+  margin-bottom: 14px;
+  transition: transform .18s ease;
+}
+.dropzone.dragover .press-top{ transform: scaleY(2.2) translateY(2px); }
+.press-icon{
+  width: 68px; height: 68px; border-radius: 50%;
+  display:flex; align-items:center; justify-content:center;
+  background: var(--surface-2); border: 1px solid var(--line);
+  color: var(--text);
+  transition: transform .18s ease;
+}
+.dropzone.dragover .press-icon{ transform: scaleY(0.72); color: var(--ember); }
+.dz-title{ font-weight:600; margin: 4px 0 2px; }
+.dz-sub{ color: var(--muted); font-size:0.9rem; margin: 0 0 20px; }
+.dz-buttons{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+
+.btn{
+  font-family: var(--body); font-weight:600; font-size:0.9rem;
+  border-radius: 999px; padding: 11px 22px; cursor:pointer;
+  border: 1px solid transparent; display:inline-flex; align-items:center; gap:8px;
+  transition: transform .12s ease, background .15s ease, border-color .15s ease;
+}
+.btn:active{ transform: scale(0.97); }
+.btn-ghost{ background: transparent; border-color: var(--line); color: var(--text); }
+.btn-ghost:hover{ border-color: var(--muted); }
+.btn-primary{ background: var(--ember); color: #1a0d08; }
+.btn-primary:hover{ background: #ff7157; }
+.btn-primary:disabled{ background: var(--ember-dim); color: rgba(255,255,255,0.4); cursor:not-allowed; }
+.btn-big{ width:100%; justify-content:center; padding: 15px 22px; margin-top: 22px; font-size:1rem; text-decoration:none; }
+.btn-link{ background:none; border:none; color: var(--muted); font-family:var(--mono); font-size:0.75rem; cursor:pointer; text-decoration: underline; }
+.btn-link:hover{ color: var(--text); }
+
+/* ============ FILE LIST ============ */
+.filelist-wrap{ text-align:left; margin-top: 22px; }
+.filelist-head{
+  display:flex; align-items:center; gap:12px;
+  font-size:0.8rem; color: var(--muted); margin-bottom:8px;
+}
+.filelist-head .btn-link{ margin-left:auto; }
+.filelist{
+  list-style:none; margin:0; padding:0;
+  max-height: 260px; overflow-y:auto;
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.filelist li{
+  display:flex; align-items:center; gap:10px;
+  padding: 9px 12px; font-size: 0.85rem;
+  border-bottom: 1px solid var(--line);
+}
+.filelist li:last-child{ border-bottom:none; }
+.filelist .fname{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.filelist .fsize{ color: var(--muted); font-family: var(--mono); font-size:0.78rem; flex-shrink:0; }
+.filelist .fremove{ background:none; border:none; color: var(--muted); cursor:pointer; font-size:1rem; line-height:1; flex-shrink:0; }
+.filelist .fremove:hover{ color: var(--ember); }
+
+/* ============ OPTIONS ============ */
+.options{ margin-top: 30px; text-align:left; }
+.options-label{ font-size:0.8rem; color: var(--muted); margin-bottom:10px; }
+.level-pills{ display:grid; grid-template-columns: repeat(3,1fr); gap:10px; }
+.pill{
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 10px; text-align:left; cursor:pointer; color: var(--text);
+  display:flex; flex-direction:column; gap:4px;
+  transition: border-color .15s ease, background .15s ease;
+}
+.pill:hover{ border-color: var(--muted); }
+.pill.active{ border-color: var(--mint); background: var(--surface-2); }
+.pill-name{ font-weight:600; font-size:0.88rem; }
+.pill-hint{ font-size:0.72rem; color: var(--muted); }
+
+/* ============ PROGRESS ============ */
+.progress-wrap{ margin-top: 20px; text-align:left; }
+.progress-row{ display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:6px; }
+.progress-track{ height:8px; border-radius:4px; background: var(--surface-2); overflow:hidden; }
+.progress-bar{ height:100%; width:0%; background: linear-gradient(90deg, var(--ember), var(--mint)); transition: width .15s ease; }
+.progress-stats{ display:flex; justify-content:space-between; margin-top:6px; font-size:0.75rem; color: var(--muted); }
+.fsapi-note{ font-size:0.72rem; color: var(--muted); margin-top:10px; }
+
+/* ============ CREDIT / COFFEE ============ */
+.credit{ text-align:center; padding: 70px 0 20px; border-top: 1px solid var(--line); margin-top: 60px; }
+.credit-line{ font-family: var(--display); font-size:1.1rem; margin:0 0 6px; }
+.credit-sub{ color: var(--muted); font-size:0.85rem; margin:0; }
+
+.coffee{ text-align:center; padding: 40px 0 60px; }
+.coffee h2{ font-family: var(--display); font-size:1.6rem; margin: 0 0 10px; }
+.coffee-sub{ color: var(--muted); max-width:420px; margin:0 auto 26px; font-size:0.92rem; line-height:1.5; }
+
+.amount-row{ display:flex; justify-content:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+.amount{
+  background: var(--surface); border:1px solid var(--line); color: var(--text);
+  border-radius:999px; padding:9px 20px; cursor:pointer; font-family:var(--mono); font-size:0.85rem;
+}
+.amount.active{ border-color: var(--mint); background: var(--surface-2); }
+.custom-amt-wrap{ margin-bottom:20px; }
+.custom-amt-wrap input{
+  background: var(--surface); border:1px solid var(--line); color:var(--text);
+  border-radius:8px; padding:10px 14px; font-size:0.9rem; width:200px; text-align:center;
+}
+
+.upi-grid{
+  display:grid; grid-template-columns: repeat(2,1fr); gap:10px;
+  max-width: 420px; margin: 0 auto;
+}
+.upi-btn{
+  display:flex; flex-direction:column; gap:2px;
+  background: var(--surface); border:1px solid var(--line); border-radius:10px;
+  padding: 14px 16px; text-decoration:none; color: var(--text);
+  transition: border-color .15s ease, transform .12s ease;
+}
+.upi-btn:hover{ border-color: var(--mint); transform: translateY(-1px); }
+.upi-btn:active{ transform: scale(0.98); }
+.upi-name{ font-weight:600; font-size:0.9rem; }
+.upi-hint{ font-size:0.72rem; color: var(--muted); }
+.upi-paypal{ grid-column: span 2; }
+.upi-note{ margin-top:18px; font-size:0.75rem; color: var(--muted); }
+
+.site-footer{
+  display:flex; justify-content:center; gap:8px; align-items:center;
+  padding: 26px 0 40px; color: var(--muted); font-size:0.78rem; font-family:var(--mono);
+}
+.site-footer .dot{ opacity:0.5; }
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 480px){
+  .level-pills{ grid-template-columns: 1fr; }
+  .upi-grid{ grid-template-columns: 1fr; }
+  .upi-paypal{ grid-column: span 1; }
+  .dz-buttons{ flex-direction:column; width:100%; }
+  .btn-ghost{ justify-content:center; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ============ CINEMATIC INTRO ============ -->
+<section id="intro" aria-hidden="true">
+  <canvas id="intro-canvas"></canvas>
+  <div id="intro-word" class="intro-word">
+    <span data-ch="A">A</span><span data-ch="N">N</span><span data-ch="T">T</span><span data-ch="I">I</span><span data-ch="F">F</span><span data-ch="Y">Y</span>
+  </div>
+  <div class="intro-sub">compressing the noise into signal</div>
+  <button id="skip-intro" type="button">Skip</button>
+</section>
+
+<!-- ============ MAIN APP ============ -->
+<div id="app" hidden>
+
+  <header class="topbar">
+    <div class="wordmark">ANTIFY</div>
+    <div class="tag">local, private, offline-capable</div>
+  </header>
+
+  <main>
+    <!-- HERO / DROPZONE -->
+    <section class="hero">
+      <h1>Squeeze many files<br><span class="accent">into one zip.</span></h1>
+      <p class="hero-sub">Drop in files, or whole folders full of folders. Everything is compressed right here on your device — nothing is ever uploaded anywhere.</p>
+
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Add files or folders to compress">
+        <div class="press">
+          <div class="press-top"></div>
+          <div class="press-icon">
+            <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          </div>
+        </div>
+        <p class="dz-title">Drag files or folders here</p>
+        <p class="dz-sub">or use the buttons below</p>
+
+        <div class="dz-buttons">
+          <label class="btn btn-ghost">
+            Add files
+            <input type="file" id="fileInput" multiple hidden>
+          </label>
+          <label class="btn btn-ghost">
+            Add a folder
+            <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
+          </label>
+        </div>
+      </div>
+
+      <!-- FILE LIST -->
+      <div id="fileListWrap" class="filelist-wrap" hidden>
+        <div class="filelist-head">
+          <span id="fileCount">0 items</span>
+          <span id="totalSize" class="mono">0 B</span>
+          <button id="clearAll" class="btn-link" type="button">clear all</button>
+        </div>
+        <ul id="fileList" class="filelist"></ul>
+      </div>
+
+      <!-- COMPRESSION OPTIONS -->
+      <div class="options">
+        <div class="options-label">Compression level</div>
+        <div class="level-pills" role="radiogroup" aria-label="Compression level">
+          <button class="pill" data-level="0" role="radio" aria-checked="false" type="button">
+            <span class="pill-name">No compression</span>
+            <span class="pill-hint">store only · fastest</span>
+          </button>
+          <button class="pill active" data-level="3" role="radio" aria-checked="true" type="button">
+            <span class="pill-name">Light</span>
+            <span class="pill-hint">quick · good for photos/video</span>
+          </button>
+          <button class="pill" data-level="6" role="radio" aria-checked="false" type="button">
+            <span class="pill-name">Medium</span>
+            <span class="pill-hint">smaller file · a bit slower</span>
+          </button>
+        </div>
+      </div>
+
+      <button id="compressBtn" class="btn btn-primary btn-big" type="button" disabled>Compress to .zip</button>
+
+      <!-- PROGRESS -->
+      <div id="progressWrap" class="progress-wrap" hidden>
+        <div class="progress-row">
+          <span id="progressLabel">Compressing…</span>
+          <span id="progressPct" class="mono">0%</span>
+        </div>
+        <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+        <div class="progress-stats mono">
+          <span id="progressSpeed">0 MB/s</span>
+          <span id="progressDone">0 B / 0 B</span>
+        </div>
+        <p id="fsapiNote" class="fsapi-note"></p>
+      </div>
+
+      <a id="downloadLink" class="btn btn-primary btn-big" hidden download="antify-archive.zip">Download zip</a>
+    </section>
+
+    <!-- SCROLL: ABOUT / CREDIT -->
+    <section class="credit">
+      <p class="credit-line">Made by <strong>Rajveer Nanadikar</strong></p>
+      <p class="credit-sub">ANTIFY runs entirely in your browser — your files never leave your device.</p>
+    </section>
+
+    <!-- SCROLL: BUY ME A COFFEE -->
+    <section class="coffee">
+      <h2>Buy me a coffee</h2>
+      <p class="coffee-sub">If ANTIFY saved you some time, a small tip is always appreciated. Pick an amount, then pick your app.</p>
+
+      <div class="amount-row" role="radiogroup" aria-label="Tip amount">
+        <button class="amount active" data-amt="25" type="button">₹25</button>
+        <button class="amount" data-amt="50" type="button">₹50</button>
+        <button class="amount" data-amt="100" type="button">₹100</button>
+        <button class="amount" data-amt="0" type="button">Custom</button>
+      </div>
+      <div id="customAmtWrap" class="custom-amt-wrap" hidden>
+        <input id="customAmt" type="number" min="1" placeholder="Enter amount (₹)" class="mono">
+      </div>
+
+      <div class="upi-grid">
+        <a class="upi-btn" id="upi-gpay" href="#" rel="noopener">
+          <span class="upi-name">Google Pay</span>
+          <span class="upi-hint">opens GPay app</span>
+        </a>
+        <a class="upi-btn" id="upi-paytm" href="#" rel="noopener">
+          <span class="upi-name">Paytm</span>
+          <span class="upi-hint">opens Paytm app</span>
+        </a>
+        <a class="upi-btn" id="upi-phonepe" href="#" rel="noopener">
+          <span class="upi-name">PhonePe</span>
+          <span class="upi-hint">opens PhonePe app</span>
+        </a>
+        <a class="upi-btn" id="upi-generic" href="#" rel="noopener">
+          <span class="upi-name">Any UPI app</span>
+          <span class="upi-hint">shows app chooser</span>
+        </a>
+      </div>
+      <p class="upi-note">UPI ID: <span class="mono">rajveer-nanadikar@fam</span> · deep links only open on a phone with the app installed.</p>
+    </section>
+
+    <footer class="site-footer">
+      <span>ANTIFY</span><span class="dot">·</span><span>made by Rajveer Nanadikar</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+
+/* --- inlined Web Worker (kept as a string + Blob URL so this stays one file) --- */
+const ZIP_WORKER_SRC = `/* Runs off the main thread so compressing 5-6GB of files never freezes the UI. */
+importScripts('https://cdnjs.cloudflare.com/ajax/libs/fflate/0.8.2/fflate.min.js');
+
+let zip = null;
+const streams = Object.create(null);
+
+function makeZip(){
+  return new fflate.Zip((err, chunk, final) => {
+    if (err){
+      postMessage({ type:'error', error: err.message || String(err) });
+      return;
+    }
+    // chunk is a Uint8Array — transfer its buffer back to the main thread, zero-copy
+    postMessage({ type:'chunk', chunk, final }, [chunk.buffer]);
+  });
+}
+
+onmessage = (e) => {
+  const msg = e.data;
+
+  try{
+    switch(msg.type){
+      case 'init':
+        zip = makeZip();
+        break;
+
+      case 'addFileStart': {
+        const level = msg.level === 0 ? 0 : msg.level;
+        // level 0 -> store only (no CPU spent compressing), otherwise deflate at the chosen level
+        const stream = (level === 0)
+          ? new fflate.ZipPassThrough(msg.path)
+          : new fflate.ZipDeflate(msg.path, { level });
+        zip.add(stream);
+        streams[msg.path] = stream;
+        break;
+      }
+
+      case 'addFileChunk': {
+        const stream = streams[msg.path];
+        if (!stream) break;
+        stream.push(new Uint8Array(msg.chunk), msg.final);
+        if (msg.final) delete streams[msg.path];
+        break;
+      }
+
+      case 'finish':
+        if (zip) zip.end();
+        break;
+    }
+  } catch(err){
+    postMessage({ type:'error', error: err.message || String(err) });
+  }
+};
+`;
+function makeZipWorker(){
+  const blob = new Blob([ZIP_WORKER_SRC], { type: 'application/javascript' });
+  return new Worker(URL.createObjectURL(blob));
+}
+
+/* =====================================================================
+   ANTIFY — client-side, multi-file / multi-folder zip compressor.
+   Everything happens in the browser: nothing is ever uploaded anywhere.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. CINEMATIC INTRO
+   --------------------------------------------------------------------- */
+(function intro(){
+  const introEl = document.getElementById('intro');
+  const app = document.getElementById('app');
+  const canvas = document.getElementById('intro-canvas');
+  const ctx = canvas.getContext('2d');
+  let raf, particles = [];
+
+  function resize(){
+    canvas.width = innerWidth * devicePixelRatio;
+    canvas.height = innerHeight * devicePixelRatio;
+    canvas.style.width = innerWidth + 'px';
+    canvas.style.height = innerHeight + 'px';
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  resize();
+  addEventListener('resize', resize);
+
+  const cx = () => innerWidth/2, cy = () => innerHeight/2;
+  const N = Math.min(70, Math.floor((innerWidth*innerHeight)/14000));
+  for(let i=0;i<N;i++){
+    const angle = Math.random()*Math.PI*2;
+    const dist = 200 + Math.random()*Math.max(innerWidth,innerHeight)*0.5;
+    particles.push({
+      x: cx() + Math.cos(angle)*dist,
+      y: cy() + Math.sin(angle)*dist,
+      startX: cx() + Math.cos(angle)*dist,
+      startY: cy() + Math.sin(angle)*dist,
+      r: 1 + Math.random()*2.2,
+      delay: Math.random()*0.25,
+      color: Math.random() > 0.5 ? '90,60' : '74,232,196' // ember-ish / mint rgb parts
+    });
+  }
+
+  const start = performance.now();
+  const DURATION = 1500; // ms — particles converge over this window
+
+  function frame(now){
+    const t = (now - start) / DURATION;
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    particles.forEach(p=>{
+      let pt = Math.max(0, Math.min(1, (t - p.delay) / (1 - p.delay)));
+      const ease = 1 - Math.pow(1-pt, 3);
+      const x = p.startX + (cx() - p.startX) * ease;
+      const y = p.startY + (cy() - p.startY) * ease;
+      const alpha = 0.55 * (1 - ease*0.85);
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(${p.color === '90,60' ? '255,90,60' : '74,232,196'},${Math.max(alpha,0)})`;
+      ctx.arc(x,y,p.r,0,Math.PI*2);
+      ctx.fill();
+    });
+    if (t < 1.05) {
+      raf = requestAnimationFrame(frame);
+    }
+  }
+  raf = requestAnimationFrame(frame);
+
+  function finishIntro(){
+    cancelAnimationFrame(raf);
+    introEl.classList.add('fade-out');
+    setTimeout(()=>{
+      introEl.remove();
+      app.hidden = false;
+    }, 550);
+  }
+
+  document.getElementById('skip-intro').addEventListener('click', finishIntro);
+  setTimeout(finishIntro, 2600);
+})();
+
+/* ---------------------------------------------------------------------
+   2. FILE / FOLDER COLLECTION
+   --------------------------------------------------------------------- */
+const state = {
+  items: [],          // { path, file, size }
+  pathSet: new Set(),
+  level: 3
+};
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const folderInput = document.getElementById('folderInput');
+const fileListWrap = document.getElementById('fileListWrap');
+const fileListEl = document.getElementById('fileList');
+const fileCountEl = document.getElementById('fileCount');
+const totalSizeEl = document.getElementById('totalSize');
+const compressBtn = document.getElementById('compressBtn');
+const clearAllBtn = document.getElementById('clearAll');
+
+function formatBytes(bytes){
+  if (bytes === 0) return '0 B';
+  const units = ['B','KB','MB','GB','TB'];
+  const i = Math.floor(Math.log(bytes)/Math.log(1024));
+  return `${(bytes/Math.pow(1024,i)).toFixed(i===0?0:1)} ${units[i]}`;
+}
+
+function uniquePath(path){
+  if (!state.pathSet.has(path)) return path;
+  const dot = path.lastIndexOf('.');
+  const base = dot > 0 ? path.slice(0,dot) : path;
+  const ext = dot > 0 ? path.slice(dot) : '';
+  let n = 1, candidate;
+  do { candidate = `${base} (${n})${ext}`; n++; } while (state.pathSet.has(candidate));
+  return candidate;
+}
+
+function addFile(file, relPath){
+  const path = uniquePath(relPath || file.name);
+  state.pathSet.add(path);
+  state.items.push({ path, file, size: file.size });
+}
+
+function renderList(){
+  const count = state.items.length;
+  fileListWrap.hidden = count === 0;
+  compressBtn.disabled = count === 0;
+  fileCountEl.textContent = `${count} item${count === 1 ? '' : 's'}`;
+  const total = state.items.reduce((s,i)=>s+i.size,0);
+  totalSizeEl.textContent = formatBytes(total);
+
+  const MAX_SHOW = 200;
+  fileListEl.innerHTML = '';
+  state.items.slice(0, MAX_SHOW).forEach((item, idx)=>{
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="fname" title="${item.path}">${item.path}</span><span class="fsize">${formatBytes(item.size)}</span>`;
+    const rm = document.createElement('button');
+    rm.className = 'fremove'; rm.type='button'; rm.textContent = '×';
+    rm.addEventListener('click', ()=>{
+      state.pathSet.delete(item.path);
+      state.items.splice(state.items.indexOf(item),1);
+      renderList();
+    });
+    li.appendChild(rm);
+    fileListEl.appendChild(li);
+  });
+  if (count > MAX_SHOW){
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="fname">+ ${count - MAX_SHOW} more…</span>`;
+    fileListEl.appendChild(li);
+  }
+}
+
+clearAllBtn.addEventListener('click', ()=>{
+  state.items = []; state.pathSet = new Set();
+  renderList();
+});
+
+fileInput.addEventListener('change', e=>{
+  [...e.target.files].forEach(f => addFile(f, f.name));
+  renderList();
+  e.target.value = '';
+});
+
+folderInput.addEventListener('change', e=>{
+  [...e.target.files].forEach(f => addFile(f, f.webkitRelativePath || f.name));
+  renderList();
+  e.target.value = '';
+});
+
+// keyboard / click activation for the dropzone itself
+dropzone.addEventListener('click', (e)=>{
+  if (e.target.closest('label')) return; // let the real buttons work
+  fileInput.click();
+});
+dropzone.addEventListener('keydown', e=>{
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+});
+
+// drag & drop, including whole folder trees, via webkitGetAsEntry
+['dragover','dragenter'].forEach(evt=>
+  dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.add('dragover'); }));
+['dragleave','drop'].forEach(evt=>
+  dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.remove('dragover'); }));
+
+dropzone.addEventListener('drop', async e=>{
+  const items = e.dataTransfer.items;
+  if (items && items.length && items[0].webkitGetAsEntry){
+    const entries = [...items].map(it => it.webkitGetAsEntry()).filter(Boolean);
+    for (const entry of entries) await walkEntry(entry, '');
+  } else {
+    [...e.dataTransfer.files].forEach(f => addFile(f, f.name));
+  }
+  renderList();
+});
+
+function walkEntry(entry, prefix){
+  return new Promise(resolve=>{
+    if (entry.isFile){
+      entry.file(file => { addFile(file, prefix + entry.name); resolve(); });
+    } else if (entry.isDirectory){
+      const reader = entry.createReader();
+      const all = [];
+      const readBatch = () => {
+        reader.readEntries(async batch=>{
+          if (!batch.length){
+            for (const child of all) await walkEntry(child, prefix + entry.name + '/');
+            resolve();
+          } else {
+            all.push(...batch);
+            readBatch(); // directory readers can page results — keep reading until empty
+          }
+        });
+      };
+      readBatch();
+    } else {
+      resolve();
+    }
+  });
+}
+
+/* ---------------------------------------------------------------------
+   3. COMPRESSION LEVEL SELECTION
+   --------------------------------------------------------------------- */
+document.querySelectorAll('.pill').forEach(pill=>{
+  pill.addEventListener('click', ()=>{
+    document.querySelectorAll('.pill').forEach(p=>{ p.classList.remove('active'); p.setAttribute('aria-checked','false'); });
+    pill.classList.add('active');
+    pill.setAttribute('aria-checked','true');
+    state.level = parseInt(pill.dataset.level,10);
+  });
+});
+
+/* ---------------------------------------------------------------------
+   4. COMPRESSION — worker-driven, chunked, streams to disk when possible
+   --------------------------------------------------------------------- */
+const progressWrap = document.getElementById('progressWrap');
+const progressBar = document.getElementById('progressBar');
+const progressPct = document.getElementById('progressPct');
+const progressSpeed = document.getElementById('progressSpeed');
+const progressDone = document.getElementById('progressDone');
+const progressLabel = document.getElementById('progressLabel');
+const fsapiNote = document.getElementById('fsapiNote');
+const downloadLink = document.getElementById('downloadLink');
+
+const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB — small enough for mobile memory, big enough to be efficient
+const supportsFSA = 'showSaveFilePicker' in window;
+
+compressBtn.addEventListener('click', async ()=>{
+  if (!state.items.length) return;
+  compressBtn.hidden = true;
+  downloadLink.hidden = true;
+  progressWrap.hidden = false;
+  progressBar.style.width = '0%';
+  progressPct.textContent = '0%';
+  progressLabel.textContent = 'Compressing…';
+
+  let writable = null;
+  let memoryChunks = null;
+
+  if (supportsFSA){
+    try{
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'antify-archive.zip',
+        types: [{ description: 'Zip archive', accept: { 'application/zip': ['.zip'] } }]
+      });
+      writable = await handle.createWritable();
+      fsapiNote.textContent = 'Writing straight to disk — memory use stays flat no matter how large the batch is.';
+    } catch(err){
+      if (err.name === 'AbortError'){ resetAfterCompress(); return; }
+      memoryChunks = [];
+      fsapiNote.textContent = 'Building the zip in memory — for multi-gigabyte batches, use Chrome or Edge for direct-to-disk writing.';
+    }
+  } else {
+    memoryChunks = [];
+    fsapiNote.textContent = 'Your browser can\u2019t stream to disk, so the zip is assembled in memory. Chrome/Edge on desktop or Android handle very large batches better.';
+  }
+
+  const totalBytes = state.items.reduce((s,i)=>s+i.size, 0);
+  let bytesRead = 0;
+  let lastTime = performance.now();
+  let lastBytes = 0;
+  let writeQueue = Promise.resolve();
+  let settled = false;
+
+  const worker = makeZipWorker();
+
+  function updateProgress(){
+    const now = performance.now();
+    const pct = totalBytes ? Math.min(100, (bytesRead/totalBytes)*100) : 100;
+    progressBar.style.width = pct.toFixed(1) + '%';
+    progressPct.textContent = pct.toFixed(0) + '%';
+    progressDone.textContent = `${formatBytes(bytesRead)} / ${formatBytes(totalBytes)}`;
+    const dt = (now - lastTime)/1000;
+    if (dt > 0.4){
+      const speed = (bytesRead - lastBytes)/dt;
+      progressSpeed.textContent = formatBytes(speed) + '/s';
+      lastTime = now; lastBytes = bytesRead;
+    }
+  }
+
+  function finish(success, message){
+    if (settled) return;
+    settled = true;
+    worker.terminate();
+    if (success){
+      progressLabel.textContent = 'Done';
+      progressBar.style.width = '100%';
+      progressPct.textContent = '100%';
+      if (memoryChunks){
+        const blob = new Blob(memoryChunks, { type: 'application/zip' });
+        downloadLink.href = URL.createObjectURL(blob);
+        downloadLink.hidden = false;
+      } else {
+        progressLabel.textContent = 'Saved to disk';
+      }
+    } else {
+      progressLabel.textContent = message || 'Something went wrong';
+    }
+    compressBtn.hidden = false;
+    compressBtn.textContent = 'Compress another batch';
+  }
+
+  worker.onerror = (e)=> finish(false, 'Compression failed in the worker.');
+
+  worker.onmessage = (e)=>{
+    const msg = e.data;
+    if (msg.type === 'chunk'){
+      const chunk = msg.chunk;
+      writeQueue = writeQueue.then(async ()=>{
+        if (writable) await writable.write(chunk);
+        else memoryChunks.push(chunk);
+      });
+      if (msg.final){
+        writeQueue.then(async ()=>{
+          if (writable) await writable.close();
+          finish(true);
+        }).catch(err=> finish(false, 'Could not finish writing the file.'));
+      }
+    } else if (msg.type === 'error'){
+      finish(false, msg.error || 'Compression error.');
+    }
+  };
+
+  worker.postMessage({ type:'init' });
+
+  // Stream every file into the worker in fixed-size chunks, sequentially,
+  // so we never hold more than one chunk of one file in memory at a time.
+  (async ()=>{
+    try{
+      for (const item of state.items){
+        worker.postMessage({ type:'addFileStart', path:item.path, level: state.level });
+        const file = item.file;
+        let offset = 0;
+        if (file.size === 0){
+          worker.postMessage({ type:'addFileChunk', path:item.path, chunk: new ArrayBuffer(0), final:true });
+        }
+        while (offset < file.size){
+          const start = offset;
+          const end = Math.min(offset + CHUNK_SIZE, file.size);
+          const buf = await file.slice(start, end).arrayBuffer();
+          const isFinal = end >= file.size;
+          worker.postMessage({ type:'addFileChunk', path:item.path, chunk: buf, final:isFinal }, [buf]);
+          bytesRead = Math.min(totalBytes, bytesRead + (end - start));
+          offset = end;
+          updateProgress();
+          // yield to keep the main thread responsive on slow/mobile devices
+          await new Promise(r=>setTimeout(r,0));
+        }
+      }
+      worker.postMessage({ type:'finish' });
+    } catch(err){
+      finish(false, 'Could not read one of the files.');
+    }
+  })();
+});
+
+function resetAfterCompress(){
+  progressWrap.hidden = true;
+  compressBtn.hidden = false;
+}
+
+/* ---------------------------------------------------------------------
+   5. BUY ME A COFFEE — UPI deep links
+   --------------------------------------------------------------------- */
+const UPI_ID = 'rajveer-nanadikar@fam';
+const PAYEE_NAME = 'Rajveer Nanadikar';
+let currentAmount = 25;
+
+function buildUpiUrl(scheme, amount){
+  const params = `pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent(PAYEE_NAME)}&cu=INR${amount ? `&am=${amount}` : ''}`;
+  return `${scheme}://pay?${params}`;
+}
+
+function refreshUpiLinks(){
+  const amt = currentAmount > 0 ? currentAmount : null;
+  document.getElementById('upi-gpay').href = buildUpiUrl('tez', amt);
+  document.getElementById('upi-paytm').href = buildUpiUrl('paytmmp', amt);
+  document.getElementById('upi-phonepe').href = buildUpiUrl('phonepe', amt);
+  document.getElementById('upi-generic').href = buildUpiUrl('upi', amt);
+}
+refreshUpiLinks();
+
+const customAmtWrap = document.getElementById('customAmtWrap');
+const customAmt = document.getElementById('customAmt');
+
+document.querySelectorAll('.amount').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.amount').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const val = parseInt(btn.dataset.amt,10);
+    if (val === 0){
+      customAmtWrap.hidden = false;
+      currentAmount = parseInt(customAmt.value,10) || 0;
+    } else {
+      customAmtWrap.hidden = true;
+      currentAmount = val;
+    }
+    refreshUpiLinks();
+  });
+});
+customAmt.addEventListener('input', ()=>{
+  currentAmount = parseInt(customAmt.value,10) || 0;
+  refreshUpiLinks();
+});
+
+</script>
+</body>
+</html>
