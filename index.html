@@ -425,73 +425,12 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
   </main>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
-
-/* --- inlined Web Worker (kept as a string + Blob URL so this stays one file) --- */
-const ZIP_WORKER_SRC = `/* Runs off the main thread so compressing 5-6GB of files never freezes the UI. */
-importScripts('https://cdnjs.cloudflare.com/ajax/libs/fflate/0.8.2/fflate.min.js');
-
-let zip = null;
-const streams = Object.create(null);
-
-function makeZip(){
-  return new fflate.Zip((err, chunk, final) => {
-    if (err){
-      postMessage({ type:'error', error: err.message || String(err) });
-      return;
-    }
-    // fflate can reuse its internal output buffer between calls, so we copy it
-    // before handing it to the main thread — transferring the original would
-    // detach a buffer fflate might still be writing into.
-    const copy = chunk.slice();
-    postMessage({ type:'chunk', chunk: copy, final }, [copy.buffer]);
-  });
-}
-
-onmessage = (e) => {
-  const msg = e.data;
-
-  try{
-    switch(msg.type){
-      case 'init':
-        zip = makeZip();
-        break;
-
-      case 'addFileStart': {
-        const level = msg.level === 0 ? 0 : msg.level;
-        // level 0 -> store only (no CPU spent compressing), otherwise deflate at the chosen level
-        const stream = (level === 0)
-          ? new fflate.ZipPassThrough(msg.path)
-          : new fflate.ZipDeflate(msg.path, { level });
-        zip.add(stream);
-        streams[msg.path] = stream;
-        break;
-      }
-
-      case 'addFileChunk': {
-        const stream = streams[msg.path];
-        if (!stream) break;
-        stream.push(new Uint8Array(msg.chunk), msg.final);
-        if (msg.final) delete streams[msg.path];
-        break;
-      }
-
-      case 'finish':
-        if (zip) zip.end();
-        break;
-    }
-  } catch(err){
-    postMessage({ type:'error', error: err.message || String(err) });
-  }
-};
-`;
-function makeZipWorker(){
-  const blob = new Blob([ZIP_WORKER_SRC], { type: 'application/javascript' });
-  return new Worker(URL.createObjectURL(blob));
-}
-
 /* =====================================================================
    ANTIFY — client-side, multi-file / multi-folder zip compressor.
+   Uses JSZip (battle-tested, widely used) instead of a hand-rolled
+   streaming worker — simpler and far less prone to edge-case bugs.
    Everything happens in the browser: nothing is ever uploaded anywhere.
    ===================================================================== */
 
@@ -527,12 +466,12 @@ function makeZipWorker(){
       startY: cy() + Math.sin(angle)*dist,
       r: 1 + Math.random()*2.2,
       delay: Math.random()*0.25,
-      color: Math.random() > 0.5 ? '90,60' : '74,232,196' // ember-ish / mint rgb parts
+      color: Math.random() > 0.5 ? '90,60' : '74,232,196'
     });
   }
 
   const start = performance.now();
-  const DURATION = 1500; // ms — particles converge over this window
+  const DURATION = 1500;
 
   function frame(now){
     const t = (now - start) / DURATION;
@@ -548,19 +487,14 @@ function makeZipWorker(){
       ctx.arc(x,y,p.r,0,Math.PI*2);
       ctx.fill();
     });
-    if (t < 1.05) {
-      raf = requestAnimationFrame(frame);
-    }
+    if (t < 1.05) raf = requestAnimationFrame(frame);
   }
   raf = requestAnimationFrame(frame);
 
   function finishIntro(){
     cancelAnimationFrame(raf);
     introEl.classList.add('fade-out');
-    setTimeout(()=>{
-      introEl.remove();
-      app.hidden = false;
-    }, 550);
+    setTimeout(()=>{ introEl.remove(); app.hidden = false; }, 550);
   }
 
   document.getElementById('skip-intro').addEventListener('click', finishIntro);
@@ -570,11 +504,7 @@ function makeZipWorker(){
 /* ---------------------------------------------------------------------
    2. FILE / FOLDER COLLECTION
    --------------------------------------------------------------------- */
-const state = {
-  items: [],          // { path, file, size }
-  pathSet: new Set(),
-  level: 3
-};
+const state = { items: [], pathSet: new Set(), level: 3 };
 
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
@@ -587,7 +517,7 @@ const compressBtn = document.getElementById('compressBtn');
 const clearAllBtn = document.getElementById('clearAll');
 
 function formatBytes(bytes){
-  if (bytes === 0) return '0 B';
+  if (!bytes) return '0 B';
   const units = ['B','KB','MB','GB','TB'];
   const i = Math.floor(Math.log(bytes)/Math.log(1024));
   return `${(bytes/Math.pow(1024,i)).toFixed(i===0?0:1)} ${units[i]}`;
@@ -619,7 +549,7 @@ function renderList(){
 
   const MAX_SHOW = 200;
   fileListEl.innerHTML = '';
-  state.items.slice(0, MAX_SHOW).forEach((item, idx)=>{
+  state.items.slice(0, MAX_SHOW).forEach((item)=>{
     const li = document.createElement('li');
     li.innerHTML = `<span class="fname" title="${item.path}">${item.path}</span><span class="fsize">${formatBytes(item.size)}</span>`;
     const rm = document.createElement('button');
@@ -656,16 +586,14 @@ folderInput.addEventListener('change', e=>{
   e.target.value = '';
 });
 
-// keyboard / click activation for the dropzone itself
 dropzone.addEventListener('click', (e)=>{
-  if (e.target.closest('label')) return; // let the real buttons work
+  if (e.target.closest('label')) return;
   fileInput.click();
 });
 dropzone.addEventListener('keydown', e=>{
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
 });
 
-// drag & drop, including whole folder trees, via webkitGetAsEntry
 ['dragover','dragenter'].forEach(evt=>
   dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.add('dragover'); }));
 ['dragleave','drop'].forEach(evt=>
@@ -685,7 +613,7 @@ dropzone.addEventListener('drop', async e=>{
 function walkEntry(entry, prefix){
   return new Promise(resolve=>{
     if (entry.isFile){
-      entry.file(file => { addFile(file, prefix + entry.name); resolve(); });
+      entry.file(file => { addFile(file, prefix + entry.name); resolve(); }, () => resolve());
     } else if (entry.isDirectory){
       const reader = entry.createReader();
       const all = [];
@@ -696,9 +624,9 @@ function walkEntry(entry, prefix){
             resolve();
           } else {
             all.push(...batch);
-            readBatch(); // directory readers can page results — keep reading until empty
+            readBatch();
           }
-        });
+        }, () => resolve());
       };
       readBatch();
     } else {
@@ -720,7 +648,7 @@ document.querySelectorAll('.pill').forEach(pill=>{
 });
 
 /* ---------------------------------------------------------------------
-   4. COMPRESSION — worker-driven, chunked, streams to disk when possible
+   4. COMPRESSION — JSZip, main thread, with progress
    --------------------------------------------------------------------- */
 const progressWrap = document.getElementById('progressWrap');
 const progressBar = document.getElementById('progressBar');
@@ -731,142 +659,61 @@ const progressLabel = document.getElementById('progressLabel');
 const fsapiNote = document.getElementById('fsapiNote');
 const downloadLink = document.getElementById('downloadLink');
 
-const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB — small enough for mobile memory, big enough to be efficient
-const supportsFSA = 'showSaveFilePicker' in window;
-
 compressBtn.addEventListener('click', async ()=>{
   if (!state.items.length) return;
+
   compressBtn.hidden = true;
   downloadLink.hidden = true;
   progressWrap.hidden = false;
   progressBar.style.width = '0%';
   progressPct.textContent = '0%';
   progressLabel.textContent = 'Compressing…';
-
-  let writable = null;
-  let memoryChunks = null;
-
-  if (supportsFSA){
-    try{
-      const handle = await window.showSaveFilePicker({
-        suggestedName: 'antify-archive.zip',
-        types: [{ description: 'Zip archive', accept: { 'application/zip': ['.zip'] } }]
-      });
-      writable = await handle.createWritable();
-      fsapiNote.textContent = 'Writing straight to disk — memory use stays flat no matter how large the batch is.';
-    } catch(err){
-      if (err.name === 'AbortError'){ resetAfterCompress(); return; }
-      memoryChunks = [];
-      fsapiNote.textContent = 'Building the zip in memory — for multi-gigabyte batches, use Chrome or Edge for direct-to-disk writing.';
-    }
-  } else {
-    memoryChunks = [];
-    fsapiNote.textContent = 'Your browser can\u2019t stream to disk, so the zip is assembled in memory. Chrome/Edge on desktop or Android handle very large batches better.';
-  }
+  fsapiNote.textContent = 'Building your zip in the browser — larger batches take a bit longer and need enough free memory to hold the finished file.';
 
   const totalBytes = state.items.reduce((s,i)=>s+i.size, 0);
-  let bytesRead = 0;
-  let lastTime = performance.now();
-  let lastBytes = 0;
-  let writeQueue = Promise.resolve();
-  let settled = false;
+  const startTime = performance.now();
 
-  const worker = makeZipWorker();
-
-  function updateProgress(){
-    const now = performance.now();
-    const pct = totalBytes ? Math.min(100, (bytesRead/totalBytes)*100) : 100;
-    progressBar.style.width = pct.toFixed(1) + '%';
-    progressPct.textContent = pct.toFixed(0) + '%';
-    progressDone.textContent = `${formatBytes(bytesRead)} / ${formatBytes(totalBytes)}`;
-    const dt = (now - lastTime)/1000;
-    if (dt > 0.4){
-      const speed = (bytesRead - lastBytes)/dt;
-      progressSpeed.textContent = formatBytes(speed) + '/s';
-      lastTime = now; lastBytes = bytesRead;
+  try{
+    const zip = new JSZip();
+    for (const item of state.items){
+      zip.file(item.path, item.file);
     }
-  }
 
-  function finish(success, message){
-    if (settled) return;
-    settled = true;
-    worker.terminate();
-    if (success){
-      progressLabel.textContent = 'Done';
-      progressBar.style.width = '100%';
-      progressPct.textContent = '100%';
-      if (memoryChunks){
-        const blob = new Blob(memoryChunks, { type: 'application/zip' });
-        downloadLink.href = URL.createObjectURL(blob);
-        downloadLink.hidden = false;
-      } else {
-        progressLabel.textContent = 'Saved to disk';
+    const level = state.level;
+    const zipOptions = level === 0
+      ? { type: 'blob', compression: 'STORE', streamFiles: true }
+      : { type: 'blob', compression: 'DEFLATE', compressionOptions: { level }, streamFiles: true };
+
+    const blob = await zip.generateAsync(zipOptions, (metadata) => {
+      const pct = metadata.percent || 0;
+      progressBar.style.width = pct.toFixed(1) + '%';
+      progressPct.textContent = pct.toFixed(0) + '%';
+      const doneBytes = Math.min(totalBytes, Math.round((pct/100) * totalBytes));
+      progressDone.textContent = `${formatBytes(doneBytes)} / ${formatBytes(totalBytes)}`;
+      const elapsed = (performance.now() - startTime) / 1000;
+      if (elapsed > 0.4){
+        progressSpeed.textContent = formatBytes(doneBytes/elapsed) + '/s';
       }
-    } else {
-      progressLabel.textContent = message || 'Something went wrong';
-    }
+      if (metadata.currentFile){
+        progressLabel.textContent = 'Compressing ' + metadata.currentFile;
+      }
+    });
+
+    progressLabel.textContent = 'Done';
+    progressBar.style.width = '100%';
+    progressPct.textContent = '100%';
+    progressDone.textContent = `${formatBytes(totalBytes)} / ${formatBytes(totalBytes)}`;
+
+    downloadLink.href = URL.createObjectURL(blob);
+    downloadLink.hidden = false;
     compressBtn.hidden = false;
     compressBtn.textContent = 'Compress another batch';
+  } catch(err){
+    progressLabel.textContent = 'Failed: ' + (err && err.message ? err.message : String(err));
+    compressBtn.hidden = false;
+    compressBtn.textContent = 'Try again';
   }
-
-  worker.onerror = (e)=> finish(false, 'Compression failed in the worker.');
-
-  worker.onmessage = (e)=>{
-    const msg = e.data;
-    if (msg.type === 'chunk'){
-      const chunk = msg.chunk;
-      writeQueue = writeQueue.then(async ()=>{
-        if (writable) await writable.write(chunk);
-        else memoryChunks.push(chunk);
-      });
-      if (msg.final){
-        writeQueue.then(async ()=>{
-          if (writable) await writable.close();
-          finish(true);
-        }).catch(err=> finish(false, 'Could not finish writing the file.'));
-      }
-    } else if (msg.type === 'error'){
-      finish(false, msg.error || 'Compression error.');
-    }
-  };
-
-  worker.postMessage({ type:'init' });
-
-  // Stream every file into the worker in fixed-size chunks, sequentially,
-  // so we never hold more than one chunk of one file in memory at a time.
-  (async ()=>{
-    try{
-      for (const item of state.items){
-        worker.postMessage({ type:'addFileStart', path:item.path, level: state.level });
-        const file = item.file;
-        let offset = 0;
-        if (file.size === 0){
-          worker.postMessage({ type:'addFileChunk', path:item.path, chunk: new ArrayBuffer(0), final:true });
-        }
-        while (offset < file.size){
-          const start = offset;
-          const end = Math.min(offset + CHUNK_SIZE, file.size);
-          const buf = await file.slice(start, end).arrayBuffer();
-          const isFinal = end >= file.size;
-          worker.postMessage({ type:'addFileChunk', path:item.path, chunk: buf, final:isFinal }, [buf]);
-          bytesRead = Math.min(totalBytes, bytesRead + (end - start));
-          offset = end;
-          updateProgress();
-          // yield to keep the main thread responsive on slow/mobile devices
-          await new Promise(r=>setTimeout(r,0));
-        }
-      }
-      worker.postMessage({ type:'finish' });
-    } catch(err){
-      finish(false, 'Could not read one of the files.');
-    }
-  })();
 });
-
-function resetAfterCompress(){
-  progressWrap.hidden = true;
-  compressBtn.hidden = false;
-}
 
 /* ---------------------------------------------------------------------
    5. BUY ME A COFFEE — UPI deep links
