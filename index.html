@@ -26,6 +26,8 @@
   --mono: 'JetBrains Mono', monospace;
 }
 
+[hidden]{ display:none !important; }
+
 *{ box-sizing: border-box; }
 html{ scroll-behavior: smooth; }
 body{
@@ -438,8 +440,11 @@ function makeZip(){
       postMessage({ type:'error', error: err.message || String(err) });
       return;
     }
-    // chunk is a Uint8Array — transfer its buffer back to the main thread, zero-copy
-    postMessage({ type:'chunk', chunk, final }, [chunk.buffer]);
+    // fflate can reuse its internal output buffer between calls, so we copy it
+    // before handing it to the main thread — transferring the original would
+    // detach a buffer fflate might still be writing into.
+    const copy = chunk.slice();
+    postMessage({ type:'chunk', chunk: copy, final }, [copy.buffer]);
   });
 }
 
