@@ -11,16 +11,18 @@
 <style>
 /* ============ TOKENS ============ */
 :root{
-  --bg: #0B0E14;
-  --surface: #131720;
-  --surface-2: #191F2B;
-  --line: #232B39;
-  --ember: #FF5A3C;
-  --ember-dim: #7A2D1F;
-  --mint: #4AE8C4;
-  --text: #E9EDF3;
-  --muted: #7C8698;
+  --bg: #FAF9F6;
+  --surface: #FFFFFF;
+  --surface-2: #F2F1EB;
+  --line: #E6E3D9;
+  --ember: #FF5630;
+  --ember-dim: #FFD9CC;
+  --mint: #00B39B;
+  --text: #16181D;
+  --muted: #6D7280;
   --radius: 14px;
+  --shadow-sm: 0 1px 2px rgba(22,24,29,0.04), 0 1px 1px rgba(22,24,29,0.03);
+  --shadow-md: 0 8px 24px rgba(22,24,29,0.08), 0 2px 6px rgba(22,24,29,0.04);
   --display: 'Space Grotesk', sans-serif;
   --body: 'Inter', sans-serif;
   --mono: 'JetBrains Mono', monospace;
@@ -47,7 +49,7 @@ a{ color: inherit; }
 /* ============ INTRO ============ */
 #intro{
   position: fixed; inset:0; z-index: 100;
-  background: radial-gradient(ellipse at 50% 40%, #151b26 0%, #0B0E14 70%);
+  background: radial-gradient(ellipse at 50% 40%, #FFFFFF 0%, #F2F0E8 70%);
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   overflow:hidden;
 }
@@ -63,22 +65,21 @@ a{ color: inherit; }
 .intro-word span{
   display:inline-block;
   opacity:0;
-  transform: translateY(28px) scale(0.85);
-  filter: blur(6px);
+  transform: translateY(16px);
+  filter: blur(3px);
   color: var(--text);
-  text-shadow: 0 0 30px rgba(255,90,60,0.35);
-  animation: letterCompress 0.6s cubic-bezier(.2,.9,.25,1) forwards;
+  text-shadow: 0 0 20px rgba(255,86,48,0.16);
+  animation: letterReveal 0.5s cubic-bezier(.16,.84,.44,1) forwards;
 }
-.intro-word span:nth-child(1){ animation-delay: .55s; }
-.intro-word span:nth-child(2){ animation-delay: .62s; }
-.intro-word span:nth-child(3){ animation-delay: .69s; }
-.intro-word span:nth-child(4){ animation-delay: .76s; }
-.intro-word span:nth-child(5){ animation-delay: .83s; }
-.intro-word span:nth-child(6){ animation-delay: .90s; }
-@keyframes letterCompress{
-  0%{ opacity:0; transform: translateY(28px) scale(0.85); filter: blur(6px); }
-  60%{ opacity:1; transform: translateY(-4px) scale(1.04); filter: blur(0); }
-  100%{ opacity:1; transform: translateY(0) scale(1); filter: blur(0); }
+.intro-word span:nth-child(1){ animation-delay: .50s; }
+.intro-word span:nth-child(2){ animation-delay: .56s; }
+.intro-word span:nth-child(3){ animation-delay: .62s; }
+.intro-word span:nth-child(4){ animation-delay: .68s; }
+.intro-word span:nth-child(5){ animation-delay: .74s; }
+.intro-word span:nth-child(6){ animation-delay: .80s; }
+@keyframes letterReveal{
+  0%{ opacity:0; transform: translateY(16px); filter: blur(3px); }
+  100%{ opacity:1; transform: translateY(0); filter: blur(0); }
 }
 .intro-sub{
   position:relative; z-index:2;
@@ -89,8 +90,8 @@ a{ color: inherit; }
   text-transform: uppercase;
   color: var(--muted);
   opacity:0;
-  animation: fadeUp .7s ease forwards;
-  animation-delay: 1.25s;
+  animation: fadeUp .6s ease forwards;
+  animation-delay: 1.05s;
 }
 @keyframes fadeUp{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
 
@@ -113,7 +114,7 @@ a{ color: inherit; }
   display:flex; justify-content:space-between; align-items:center;
   padding: 22px clamp(20px,5vw,64px);
   border-bottom: 1px solid var(--line);
-  position:sticky; top:0; background: rgba(11,14,20,0.85); backdrop-filter: blur(10px);
+  position:sticky; top:0; background: rgba(250,249,246,0.82); backdrop-filter: blur(10px);
   z-index: 10;
 }
 .wordmark{ font-family: var(--display); font-weight:700; letter-spacing:0.04em; font-size:1.1rem; }
@@ -137,12 +138,14 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
   border-radius: var(--radius);
   padding: 40px 20px 30px;
   background: var(--surface);
-  transition: border-color .2s ease, background .2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
   outline: none;
 }
 .dropzone:focus-visible, .dropzone.dragover{
   border-color: var(--ember);
   background: var(--surface-2);
+  box-shadow: var(--shadow-md);
 }
 .press{ display:flex; flex-direction:column; align-items:center; margin-bottom: 14px; }
 .press-top{
@@ -157,6 +160,7 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
   display:flex; align-items:center; justify-content:center;
   background: var(--surface-2); border: 1px solid var(--line);
   color: var(--text);
+  box-shadow: var(--shadow-sm);
   transition: transform .18s ease;
 }
 .dropzone.dragover .press-icon{ transform: scaleY(0.72); color: var(--ember); }
@@ -171,11 +175,11 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
   transition: transform .12s ease, background .15s ease, border-color .15s ease;
 }
 .btn:active{ transform: scale(0.97); }
-.btn-ghost{ background: transparent; border-color: var(--line); color: var(--text); }
+.btn-ghost{ background: var(--surface); border-color: var(--line); color: var(--text); box-shadow: var(--shadow-sm); }
 .btn-ghost:hover{ border-color: var(--muted); }
-.btn-primary{ background: var(--ember); color: #1a0d08; }
-.btn-primary:hover{ background: #ff7157; }
-.btn-primary:disabled{ background: var(--ember-dim); color: rgba(255,255,255,0.4); cursor:not-allowed; }
+.btn-primary{ background: var(--ember); color: #2A0900; box-shadow: 0 6px 18px rgba(255,86,48,0.28); }
+.btn-primary:hover{ background: #FF6A47; box-shadow: 0 8px 22px rgba(255,86,48,0.34); }
+.btn-primary:disabled{ background: var(--ember-dim); color: rgba(42,9,0,0.35); box-shadow:none; cursor:not-allowed; }
 .btn-big{ width:100%; justify-content:center; padding: 15px 22px; margin-top: 22px; font-size:1rem; text-decoration:none; }
 .btn-link{ background:none; border:none; color: var(--muted); font-family:var(--mono); font-size:0.75rem; cursor:pointer; text-decoration: underline; }
 .btn-link:hover{ color: var(--text); }
@@ -191,6 +195,8 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
   list-style:none; margin:0; padding:0;
   max-height: 260px; overflow-y:auto;
   border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 .filelist li{
   display:flex; align-items:center; gap:10px;
@@ -211,10 +217,11 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
   background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
   padding: 12px 10px; text-align:left; cursor:pointer; color: var(--text);
   display:flex; flex-direction:column; gap:4px;
-  transition: border-color .15s ease, background .15s ease;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
 }
 .pill:hover{ border-color: var(--muted); }
-.pill.active{ border-color: var(--mint); background: var(--surface-2); }
+.pill.active{ border-color: var(--mint); background: var(--surface-2); box-shadow: 0 0 0 3px rgba(0,179,155,0.12), var(--shadow-sm); }
 .pill-name{ font-weight:600; font-size:0.88rem; }
 .pill-hint{ font-size:0.72rem; color: var(--muted); }
 
@@ -239,12 +246,15 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
 .amount{
   background: var(--surface); border:1px solid var(--line); color: var(--text);
   border-radius:999px; padding:9px 20px; cursor:pointer; font-family:var(--mono); font-size:0.85rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
 }
-.amount.active{ border-color: var(--mint); background: var(--surface-2); }
+.amount.active{ border-color: var(--mint); background: var(--surface-2); box-shadow: 0 0 0 3px rgba(0,179,155,0.12), var(--shadow-sm); }
 .custom-amt-wrap{ margin-bottom:20px; }
 .custom-amt-wrap input{
   background: var(--surface); border:1px solid var(--line); color:var(--text);
   border-radius:8px; padding:10px 14px; font-size:0.9rem; width:200px; text-align:center;
+  box-shadow: var(--shadow-sm);
 }
 
 .upi-grid{
@@ -255,9 +265,10 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
   display:flex; flex-direction:column; gap:2px;
   background: var(--surface); border:1px solid var(--line); border-radius:10px;
   padding: 14px 16px; text-decoration:none; color: var(--text);
-  transition: border-color .15s ease, transform .12s ease;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .15s ease, transform .12s ease, box-shadow .15s ease;
 }
-.upi-btn:hover{ border-color: var(--mint); transform: translateY(-1px); }
+.upi-btn:hover{ border-color: var(--mint); transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .upi-btn:active{ transform: scale(0.98); }
 .upi-name{ font-weight:600; font-size:0.9rem; }
 .upi-hint{ font-size:0.72rem; color: var(--muted); }
@@ -265,10 +276,48 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
 .upi-note{ margin-top:18px; font-size:0.75rem; color: var(--muted); }
 
 .site-footer{
-  display:flex; justify-content:center; gap:8px; align-items:center;
-  padding: 26px 0 40px; color: var(--muted); font-size:0.78rem; font-family:var(--mono);
+  text-align:center;
+  padding: 26px 20px 40px; color: var(--muted); font-size:0.78rem; font-family:var(--mono);
+  line-height:1.7;
 }
-.site-footer .dot{ opacity:0.5; }
+.site-footer .dot{ opacity:0.5; margin: 0 7px; }
+.footer-link{ color: var(--muted); text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.footer-link:hover{ color: var(--ember); }
+
+/* ============ PRIVACY POLICY PAGE ============ */
+#privacy[hidden]{ display:none; }
+.privacy-main{ max-width: 680px; margin: 0 auto; padding: clamp(40px,7vw,72px) clamp(18px,5vw,24px) 90px; }
+.back-link{
+  font-family: var(--mono); font-size:0.75rem; color: var(--muted); text-decoration:none;
+  border:1px solid var(--line); padding:8px 14px; border-radius:999px; background: var(--surface);
+  box-shadow: var(--shadow-sm); transition: border-color .15s ease, color .15s ease;
+}
+.back-link:hover{ border-color: var(--muted); color: var(--text); }
+.eyebrow{ font-family: var(--mono); font-size:0.75rem; letter-spacing:0.14em; text-transform:uppercase; color: var(--mint); margin: 0 0 12px; }
+.privacy-main h1{ font-family: var(--display); font-weight:700; font-size: clamp(1.8rem, 4.5vw, 2.6rem); line-height:1.12; margin: 0 0 10px; }
+.updated{ color: var(--muted); font-size:0.85rem; margin: 0 0 40px; }
+.p-card{
+  background: var(--surface); border:1px solid var(--line); border-radius: var(--radius);
+  padding: 24px clamp(20px,4vw,30px); margin-bottom: 18px; box-shadow: var(--shadow-sm);
+}
+.p-card h2{
+  font-family: var(--display); font-weight:700; font-size:1.1rem; margin: 0 0 14px;
+  display:flex; align-items:baseline; gap:10px;
+}
+.p-card h2 .num{ color: var(--ember); font-family: var(--mono); font-size:0.85rem; font-weight:600; }
+.p-card p{ color: var(--text); line-height:1.65; margin: 0 0 12px; font-size:0.95rem; }
+.p-card p:last-child{ margin-bottom:0; }
+.p-card ul{ margin: 0 0 12px; padding-left: 20px; }
+.p-card ul:last-child{ margin-bottom:0; }
+.p-card li{ color: var(--text); line-height:1.6; margin-bottom: 8px; font-size:0.95rem; }
+.p-card li:last-child{ margin-bottom:0; }
+.p-card .lead{ color: var(--muted); }
+.contact-card{
+  display:flex; flex-direction:column; gap:4px;
+  background: var(--surface-2); border-radius:10px; padding: 16px 18px; margin-top: 6px;
+}
+.contact-card .name{ font-weight:600; }
+.contact-card .site{ font-family: var(--mono); font-size:0.85rem; color: var(--ember); text-decoration:none; }
 
 /* ============ RESPONSIVE ============ */
 @media (max-width: 480px){
@@ -420,7 +469,72 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
     </section>
 
     <footer class="site-footer">
-      <span>ANTIFY</span><span class="dot">·</span><span>made by Rajveer Nanadikar</span>
+      © 2026 ANTIFY — made by Rajveer Nanadikar <span class="dot">|</span> <a href="#privacy" target="_blank" rel="noopener" class="footer-link">Privacy Policy</a>
+    </footer>
+  </main>
+</div>
+
+<!-- ============ PRIVACY POLICY PAGE ============ -->
+<div id="privacy" hidden>
+  <header class="topbar">
+    <a href="." id="privacyWordmark" class="wordmark">ANTIFY</a>
+    <a href="." id="backToApp" class="back-link">← Back to app</a>
+  </header>
+
+  <main class="privacy-main">
+    <p class="eyebrow">Privacy Policy</p>
+    <h1>Your files never leave your device.</h1>
+    <p class="updated">Last updated: August 16, 2026</p>
+
+    <div class="p-card">
+      <p class="lead">At ANTIFY (antifyzip.vercel.app), your privacy is our absolute priority. This policy explains how your data is treated when you use our web-based file compression tool and web utilities.</p>
+    </div>
+
+    <div class="p-card">
+      <h2><span class="num">01</span> 100% on-device &amp; local processing</h2>
+      <p>ANTIFY is designed to function as an offline-capable, local web application.</p>
+      <ul>
+        <li><strong>No file uploads:</strong> when you drag files, folders, or archives into ANTIFY, no data is ever uploaded to any external server, cloud storage, or third-party service.</li>
+        <li><strong>Browser-level compression:</strong> all compression (ZIP generation) is executed entirely within your device's browser using local client-side JavaScript. Your files never leave your device.</li>
+      </ul>
+    </div>
+
+    <div class="p-card">
+      <h2><span class="num">02</span> Information we do NOT collect</h2>
+      <p>Because ANTIFY operates completely locally on your client device, we do not collect, store, or monitor:</p>
+      <ul>
+        <li>The contents, names, or metadata of the files you compress.</li>
+        <li>Your personal identification information (e.g. name, address, email address).</li>
+        <li>User-uploaded assets or temporary directory structures.</li>
+      </ul>
+    </div>
+
+    <div class="p-card">
+      <h2><span class="num">03</span> Analytics &amp; infrastructure</h2>
+      <p><strong>Hosting platforms:</strong> ANTIFY is hosted on modern web hosting infrastructure (such as Vercel and GitHub Pages). These hosting providers may automatically collect basic server log data (such as IP address, browser type, and access times) strictly for network security, DDoS protection, and performance monitoring.</p>
+      <p><strong>External libraries:</strong> ANTIFY loads essential fonts (via Google Fonts) and client-side dependencies (such as JSZip) via secure Content Delivery Networks (CDNs). These CDNs serve static scripts to your browser to power the user interface and local ZIP generation.</p>
+    </div>
+
+    <div class="p-card">
+      <h2><span class="num">04</span> Direct payments &amp; tips</h2>
+      <p>If you choose to support the developer via the "Buy me a coffee" feature:</p>
+      <ul>
+        <li>All payments are processed directly through external Unified Payments Interface (UPI) deep-link applications (e.g. Google Pay, Paytm, PhonePe) or standard payment gateways.</li>
+        <li>ANTIFY does not store, process, or have access to your bank details, UPI PINs, or financial transaction histories. All financial transactions are governed strictly by the privacy policies of your chosen payment provider.</li>
+      </ul>
+    </div>
+
+    <div class="p-card">
+      <h2><span class="num">05</span> Contact us</h2>
+      <p>If you have any questions or feedback regarding this Privacy Policy or the security of ANTIFY, please reach out to the developer:</p>
+      <div class="contact-card">
+        <span class="name">Rajveer Nanadikar</span>
+        <a class="site" href="https://antifyzip.vercel.app" target="_blank" rel="noopener">antifyzip.vercel.app</a>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      © 2026 ANTIFY — made by Rajveer Nanadikar
     </footer>
   </main>
 </div>
@@ -435,9 +549,19 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
+   0. ROUTING — plain hash check, no framework needed for one extra page
+   --------------------------------------------------------------------- */
+const isPrivacyRoute = location.hash === '#privacy';
+if (isPrivacyRoute){
+  document.getElementById('intro').remove();
+  document.getElementById('app').hidden = true;
+  document.getElementById('privacy').hidden = false;
+}
+
+/* ---------------------------------------------------------------------
    1. CINEMATIC INTRO
    --------------------------------------------------------------------- */
-(function intro(){
+if (!isPrivacyRoute) (function intro(){
   const introEl = document.getElementById('intro');
   const app = document.getElementById('app');
   const canvas = document.getElementById('intro-canvas');
@@ -455,23 +579,23 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
   addEventListener('resize', resize);
 
   const cx = () => innerWidth/2, cy = () => innerHeight/2;
-  const N = Math.min(70, Math.floor((innerWidth*innerHeight)/14000));
+  const N = Math.min(42, Math.floor((innerWidth*innerHeight)/22000));
   for(let i=0;i<N;i++){
     const angle = Math.random()*Math.PI*2;
-    const dist = 200 + Math.random()*Math.max(innerWidth,innerHeight)*0.5;
+    const dist = 160 + Math.random()*Math.max(innerWidth,innerHeight)*0.38;
     particles.push({
       x: cx() + Math.cos(angle)*dist,
       y: cy() + Math.sin(angle)*dist,
       startX: cx() + Math.cos(angle)*dist,
       startY: cy() + Math.sin(angle)*dist,
-      r: 1 + Math.random()*2.2,
-      delay: Math.random()*0.25,
-      color: Math.random() > 0.5 ? '90,60' : '74,232,196'
+      r: 0.8 + Math.random()*1.4,
+      delay: Math.random()*0.2,
+      color: Math.random() > 0.82 ? '0,179,155' : '255,86,48'
     });
   }
 
   const start = performance.now();
-  const DURATION = 1500;
+  const DURATION = 1300;
 
   function frame(now){
     const t = (now - start) / DURATION;
@@ -481,9 +605,9 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
       const ease = 1 - Math.pow(1-pt, 3);
       const x = p.startX + (cx() - p.startX) * ease;
       const y = p.startY + (cy() - p.startY) * ease;
-      const alpha = 0.55 * (1 - ease*0.85);
+      const alpha = 0.32 * (1 - ease*0.9);
       ctx.beginPath();
-      ctx.fillStyle = `rgba(${p.color === '90,60' ? '255,90,60' : '74,232,196'},${Math.max(alpha,0)})`;
+      ctx.fillStyle = `rgba(${p.color},${Math.max(alpha,0)})`;
       ctx.arc(x,y,p.r,0,Math.PI*2);
       ctx.fill();
     });
@@ -498,7 +622,7 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
   }
 
   document.getElementById('skip-intro').addEventListener('click', finishIntro);
-  setTimeout(finishIntro, 2600);
+  setTimeout(finishIntro, 2200);
 })();
 
 /* ---------------------------------------------------------------------
