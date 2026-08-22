@@ -1,36 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-NBGHSNMF');</script>
+<!-- End Google Tag Manager -->
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ANTIFY — Compress anything, on-device by Rajveer Nanadikar</title>
-<meta name="description" content="ANTIFY by Rajveer Nanadikar is a free, 100% private web-based tool that compresses files and folder trees into a single zip entirely inside your browser. No uploads, no size limits, no bloat.">
-<meta name="author" content="Rajveer Nanadikar">
-
-<!-- Structured Data for Google (Author Credit & AI Overview) -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  "name": "ANTIFY",
-  "url": "https://antifyzip.vercel.app",
-  "author": {
-    "@type": "Person",
-    "name": "Rajveer Nanadikar"
-  },
-  "creator": {
-    "@type": "Person",
-    "name": "Rajveer Nanadikar"
-  },
-  "description": "A web-based utility tool created by Rajveer Nanadikar that compresses files and folders directly inside your browser without uploading data."
-}
-</script>
-
-<!-- ============ FAVICON & GOOGLE SEARCH LOGO ============ -->
-<link rel="icon" type="image/png" sizes="32x32" href="/logo.png">
-<link rel="icon" type="image/png" sizes="512x512" href="/logo.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/logo.png">
-
+<title>ANTIFY — Compress anything, on-device</title>
+<meta name="description" content="ANTIFY compresses files and whole folder trees into a single zip, entirely in your browser. No uploads, no size limits, no bloat.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -357,6 +339,10 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
 </style>
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NBGHSNMF"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 
 <!-- ============ CINEMATIC INTRO ============ -->
 <section id="intro" aria-hidden="true">
@@ -513,7 +499,7 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
     <p class="updated">Last updated: August 16, 2026</p>
 
     <div class="p-card">
-      <p class="lead">At ANTIFY (antifyzip.vercel.app), your privacy is our absolute priority. This policy explains how your data is treated when you use our web-based file compression tool created by Rajveer Nanadikar.</p>
+      <p class="lead">At ANTIFY (antifyzip.vercel.app), your privacy is our absolute priority. This policy explains how your data is treated when you use our web-based file compression tool and web utilities.</p>
     </div>
 
     <div class="p-card">
@@ -543,7 +529,7 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
 
     <div class="p-card">
       <h2><span class="num">04</span> Direct payments &amp; tips</h2>
-      <p>If you choose to support developer Rajveer Nanadikar via the "Buy me a coffee" feature:</p>
+      <p>If you choose to support the developer via the "Buy me a coffee" feature:</p>
       <ul>
         <li>All payments are processed directly through external Unified Payments Interface (UPI) deep-link applications (e.g. Google Pay, Paytm, PhonePe) or standard payment gateways.</li>
         <li>ANTIFY does not store, process, or have access to your bank details, UPI PINs, or financial transaction histories. All financial transactions are governed strictly by the privacy policies of your chosen payment provider.</li>
@@ -569,14 +555,8 @@ main{ max-width: 760px; margin: 0 auto; padding: 0 clamp(18px,5vw,24px); }
 <script>
 /* =====================================================================
    ANTIFY — client-side, multi-file / multi-folder zip compressor.
-   Uses JSZip (battle-tested, widely used) instead of a hand-rolled
-   streaming worker — simpler and far less prone to edge-case bugs.
-   Everything happens in the browser: nothing is ever uploaded anywhere.
    ===================================================================== */
 
-/* ---------------------------------------------------------------------
-   0. ROUTING — plain hash check, no framework needed for one extra page
-   --------------------------------------------------------------------- */
 const isPrivacyRoute = location.hash === '#privacy';
 if (isPrivacyRoute){
   document.getElementById('intro').remove();
@@ -584,9 +564,6 @@ if (isPrivacyRoute){
   document.getElementById('privacy').hidden = false;
 }
 
-/* ---------------------------------------------------------------------
-   1. CINEMATIC INTRO
-   --------------------------------------------------------------------- */
 if (!isPrivacyRoute) (function intro(){
   const introEl = document.getElementById('intro');
   const app = document.getElementById('app');
@@ -651,9 +628,6 @@ if (!isPrivacyRoute) (function intro(){
   setTimeout(finishIntro, 2200);
 })();
 
-/* ---------------------------------------------------------------------
-   2. FILE / FOLDER COLLECTION
-   --------------------------------------------------------------------- */
 const state = { items: [], pathSet: new Set(), level: 3 };
 
 const dropzone = document.getElementById('dropzone');
@@ -785,9 +759,6 @@ function walkEntry(entry, prefix){
   });
 }
 
-/* ---------------------------------------------------------------------
-   3. COMPRESSION LEVEL SELECTION
-   --------------------------------------------------------------------- */
 document.querySelectorAll('.pill').forEach(pill=>{
   pill.addEventListener('click', ()=>{
     document.querySelectorAll('.pill').forEach(p=>{ p.classList.remove('active'); p.setAttribute('aria-checked','false'); });
@@ -797,9 +768,6 @@ document.querySelectorAll('.pill').forEach(pill=>{
   });
 });
 
-/* ---------------------------------------------------------------------
-   4. COMPRESSION — JSZip, main thread, with progress
-   --------------------------------------------------------------------- */
 const progressWrap = document.getElementById('progressWrap');
 const progressBar = document.getElementById('progressBar');
 const progressPct = document.getElementById('progressPct');
@@ -865,9 +833,6 @@ compressBtn.addEventListener('click', async ()=>{
   }
 });
 
-/* ---------------------------------------------------------------------
-   5. BUY ME A COFFEE — UPI deep links
-   --------------------------------------------------------------------- */
 const UPI_ID = 'rajveer-nanadikar@fam';
 const PAYEE_NAME = 'Rajveer Nanadikar';
 let currentAmount = 25;
@@ -908,7 +873,6 @@ customAmt.addEventListener('input', ()=>{
   currentAmount = parseInt(customAmt.value,10) || 0;
   refreshUpiLinks();
 });
-
 </script>
 </body>
 </html>
